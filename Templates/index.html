@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escanear Rede</title>
+    <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script>
+    <script>
+        var socket = io();
+
+      
+        function startScan() {
+            const ipRange = document.getElementById('ip_range').value;
+
+            if (!ipRange) {
+                alert('Por favor, forneça um intervalo de IP.');
+                return;
+            }
+
+            
+            document.getElementById('progress-bar').style.display = 'inline';
+            document.getElementById('progress-text').style.display = 'inline';
+            document.getElementById('progress-bar').value = 0;
+            document.getElementById('progress-text').textContent = 'Progresso: 0%';
+            document.getElementById('ip-list').innerHTML = ''; 
+
+           
+            fetch('/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ip_range: ipRange })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    alert('Erro ao iniciar o scan.');
+                }
+            })
+            .catch(err => {
+                alert('Erro ao iniciar o scan: ' + err.message);
+            });
+        }
+
+        
+        socket.on('progress', function(data) {
+            const progress = data.progress;
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+
+            progressBar.value = progress;
+            progressText.textContent = `Progresso: ${progress}%`;
+        });
+
+       
+        socket.on('new_ip', function(data) {
+            const ipList = document.getElementById('ip-list');
+            const newIp = document.createElement('li');
+            newIp.textContent = 'Dispositivo encontrado: ' + data.ip;
+            ipList.appendChild(newIp);
+        });
+
+      
+        socket.on('scan_complete', function(data) {
+            const downloadLink = document.getElementById('download-link');
+            downloadLink.href = data.file_path;
+            downloadLink.style.display = 'inline';  
+            downloadLink.textContent = 'Clique aqui para baixar o arquivo gerado';
+            alert('Escaneamento completo!');
+        });
+    </script>
+</head>
+<body>
+
+    <h1>Inventário de Ativos de Rede</h1>
+    <label for="ip_range">Digite a faixa de IP (Exemplo: 192.168.1.0/24):</label>
+    <input type="text" id="ip_range" placeholder="Exemplo: 192.168.1.0/24">
+    <button onclick="startScan()">Iniciar Scan</button>
+
+    <div id="scan-status" style="margin-top: 10px;"></div>
+
+   
+    <progress id="progress-bar" value="0" max="100" style="display:none; width: 100%; margin-top: 20px;"></progress>
+    <p id="progress-text" style="display:none; font-weight: bold; color: #4CAF50;">Progresso: 0%</p>
+
+ 
+    <h3>IPs Encontrados:</h3>
+    <ul id="ip-list"></ul>
+
+   
+    <div>
+        <a id="download-link" href="#" download style="display:none;">Clique aqui para baixar o arquivo gerado</a>
+    </div>
+
+</body>
+</html>
